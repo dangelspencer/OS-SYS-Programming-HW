@@ -3,6 +3,7 @@
 #include<stdlib.h>
 #include<errno.h>
 #include<iostream>
+#include<sys/wait.h>
 
 using namespace std;
 
@@ -15,6 +16,7 @@ int main(int argc, char* argv[]){
   
   pid_t PID;
   int N = atoi(argv[1]);
+  int status = 0;
 
   for (int i = 0; i < N; i++){
     printf("This is the main process, my PID is %d\n", getpid());
@@ -34,6 +36,7 @@ int main(int argc, char* argv[]){
       }
     }
   }
-  wait(NULL);
+  
+  wait(&status);
   return 0;
 }
