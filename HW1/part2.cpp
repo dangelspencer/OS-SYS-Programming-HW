@@ -12,8 +12,20 @@ int main(int argc, char* argv[]){
     cout << "Usage: " << argv[0] << " <file_name>" << endl;
     return 0;
   }
-  
-  
+  int PID, ret;
+printf("Parent PID %d\n",getpid());
 
-  return 0;
+if(fork()==0) {
+    ret = execl ("/bin/ls", "ls", "-1", (char *)0);
+    printf("child 1 \n");
+    if(fork()==0) {
+        ret = execl ("/bin/ps", "ps", "-ef", (char *)0);
+        printf("child 2 \n");
+        if(fork()==0) {
+            ret = execl ("/bin/cat", "cat", argv[1], (char *)0);
+            printf("child 3 \n");
+        }
+    }
 }
+return 0;
+}    
