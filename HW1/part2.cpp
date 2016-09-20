@@ -18,47 +18,24 @@ int main(int argc, char* argv[]){
   printf("Parent PID %d\n",getpid());
 
   if(fork()==0) {
-      
+    if(fork()==0) {
       if(fork()==0) {
-          
-          if(fork()==0) {
-              
-          }else{
-            //child process 3
-            execl ("/bin/cat", "cat", argv[1], (char *)0);
-            printf("child 3 \n");
-          }
-      }else{
-      
-        //child process 2
-        execl ("/bin/ps", "ps", "-ef", (char *)0);
-        printf("child 2 \n");
+        //child process 3
+        sleep(2);
+        ret = execl ("/bin/cat", "cat", argv[1], (char *)0);
+        printf("child 3 \n");
       }
-      
-  }else{
+      //child process 2
+      sleep(1);
+      ret = execl ("/bin/ps", "ps", "-ef", (char *)0);
+      printf("child 2 \n");
+    }
     //child process 1
-    execl ("/bin/ls", "ls", "-1", (char *)0);
+    ret = execl ("/bin/ls", "ls", "-1", (char *)0);
     printf("child 1 \n");
   }
-
- 
- //test code
-  /*if (fork() != 0){
-    //child process 1
-    execl ("/bin/ls", "ls", "-1", (char *)0);
-    printf("child 1 \n");
-  }
-  if (fork() != 0){
-    //child process 2
-    execl ("/bin/ps", "ps", "-ef", (char *)0);
-    printf("child 2 \n");
-  }
-  if (fork() != 0){
-    //child process 3
-    execl ("/bin/cat", "cat", argv[1], (char *)0);
-    printf("child 3 \n");
-  }
-  */
+  sleep(3);
+  cout << "main process terminates" << endl;
   wait(&status);
   return 0;
 
