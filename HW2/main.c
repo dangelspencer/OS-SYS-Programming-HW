@@ -24,6 +24,8 @@ int Delay100ms = 0;
 
 int semid;
 
+int num_readers;
+
 /*-------------------------------------------
     Delay routines
  --------------------------------------------*/
@@ -115,7 +117,7 @@ void reader()
 {
     struct sembuf op1;
     //lock reading semaphore
-    op1.sem_num = 1; 
+    op1.sem_num = 0; 
     op1.sem_op = -1; 
     op1.sem_flg = 0; 
     if (semop(semid,&op1,1) == -1)
@@ -123,7 +125,9 @@ void reader()
       perror("Thread1:semop failure Reason:");
       exit(-1);
     }
-
+    
+    
+    
     int i, j, n;
     char results[FILE_SIZE];
 
@@ -146,13 +150,33 @@ void reader()
     }
 
     //unlock reading semaphore
-    op1.sem_num = 1; 
+    op1.sem_num = 0; 
     op1.sem_op = 1; 
     op1.sem_flg = 0; 
     if (semop(semid,&op1,1) == -1)
     {
       perror("Thread1:semop failure Reason:");
       exit(-1);
+    }
+    
+    num_readers--;
+    
+    if (num_readers == 0)
+    {
+      typedef union semun {
+          int val;
+          struct semid_ds *buf;
+          ushort *array;
+      } semun_t;
+      semun_t arg, arg1;
+    
+      //reading semaphore
+      arg1.val = 0;
+      if (semctl(semid, 0, SETVAL, arg1) < 0)
+      {
+          perror("semctl failure Reason: ");
+          exit(-1);
+      }
     }
 }
 
@@ -218,6 +242,9 @@ void writer()
 *-------------------------------------------*/
 void create_reader()
 {
+
+    num_readers++;
+
     if (0 == fork())
     {
         reader();
@@ -225,6 +252,7 @@ void create_reader()
     }
 
     readerID++;
+    
 }
 
 void create_writer()
@@ -236,6 +264,21 @@ void create_writer()
     }
 
     writerID++;
+    
+    typedef union semun {
+        int val;
+        struct semid_ds *buf;
+        ushort *array;
+    } semun_t;
+    semun_t arg, arg1;
+    
+    //writing semaphore
+    arg.val = 0;
+    if (semctl(semid, 0, SETVAL, arg) < 0)
+    {
+        perror("semctl failure Reason:");
+        exit(-1);
+    }
 }
 
 /*-------------------------------------------
@@ -247,6 +290,8 @@ void main()
     int i;
     int fd;
 
+    num_readers = 0;    
+    
     //initialize semaphores
     typedef union semun {
         int val;
@@ -255,7 +300,7 @@ void main()
     } semun_t;
     semun_t arg, arg1;
     semid = semget(IPC_PRIVATE, 2, 0666 | IPC_CREAT);
-
+    
     //writing semaphore
     arg.val = 1;
     if (semctl(semid, 0, SETVAL, arg) < 0)
@@ -264,13 +309,21 @@ void main()
         exit(-1);
     }
 
-    //reading semaphore
-    arg1.val = 0;
+    //writing semaphore
+/*    arg.val = 1;
+    if (semctl(semid, 0, SETVAL, arg) < 0)
+    {
+        perror("semctl failure Reason:");
+        exit(-1);
+    }*/
+
+/*    //reading semaphore
+    arg1.val = 1;
     if (semctl(semid, 1, SETVAL, arg1) < 0)
     {
         perror("semctl failure Reason: ");
         exit(-1);
-    }
+    }*/
 
     calcuate_delay();
 
