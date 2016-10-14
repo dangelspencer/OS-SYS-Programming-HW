@@ -112,10 +112,11 @@ void calcuate_delay()
  --------------------------------------------*/
 void reader()
 {
+    struct sembuf op1;
     //lock reading semaphore
-    op2.sem_num = 1; 
-    op2.sem_op = -1; 
-    op2.sem_flg = 0; 
+    op1.sem_num = 1; 
+    op1.sem_op = -1; 
+    op1.sem_flg = 0; 
     if (semop(semid,&op2,1) == -1)
     {
       perror("Thread1:semop failure Reason:");
@@ -144,9 +145,9 @@ void reader()
     }
 
     //unlock reading semaphore
-    op2.sem_num = 1; 
-    op2.sem_op = 1; 
-    op2.sem_flg = 0; 
+    op1.sem_num = 1; 
+    op1.sem_op = 1; 
+    op1.sem_flg = 0; 
     if (semop(semid,&op2,1) == -1)
     {
       perror("Thread1:semop failure Reason:");
