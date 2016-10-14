@@ -118,7 +118,7 @@ void reader()
     op1.sem_num = 1; 
     op1.sem_op = -1; 
     op1.sem_flg = 0; 
-    if (semop(semid,&op2,1) == -1)
+    if (semop(semid,&op1,1) == -1)
     {
       perror("Thread1:semop failure Reason:");
       exit(-1);
