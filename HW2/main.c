@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <sys/sem.h>
 
 #define FILE_SIZE 11
 #define NO_PROC 10
