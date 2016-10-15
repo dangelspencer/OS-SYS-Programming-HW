@@ -1,346 +1,204 @@
-#include <stdio.h>
-#include <signal.h>
-#include <unistd.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <sys/times.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <sys/wait.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#include <stdio.h>
 
-#define FILE_SIZE 11
-#define NO_PROC 10
+//create user defined semun for initializing the semaphores
 
-int DelayCount = 0;
-
-int readerID = 0;
-int writerID = 0;
-
-char *shared_buffer;
-
-int Delay100ms = 0;
-
-int semid;
-
-/*-------------------------------------------
-    Delay routines
- --------------------------------------------*/
-void basic_delay()
+void *Thread1(void *arg)
 {
-    long i, j, k;
-    for (i = 0; i < 200L; i++)
-    {
-        for (j = 0; j < 400L; j++)
-        {
-            k = k + i;
-        }
-    }
-}
+  int semid;
+  semid = (int)arg;
 
-/* do some delays (in 100 ms/tick) */
-void delay(int delay_time)
-{
-    int i, j;
+  //in order to perform the operations on semaphore
+  // first need to define the sembuf object
+  struct sembuf op1,op2;
 
-    for (i = 0; i < delay_time; i++)
-    {
-        for (j = 0; j < Delay100ms; j++)
-        {
-            basic_delay();
-        }
-    }
-}
+  //operation for 0th semaphore
+  op1.sem_num = 0; //signifies 0th semaphore
+  op1.sem_op = -1; //reduce the semaphore count to lock
+  op1.sem_flg = 0; //wait till we get lock on semaphore
 
-int stop_alarm = 0;
+  //operation for 1th semaphore
+  op2.sem_num = 1; //signifies 0th semaphore
+  op2.sem_op = -1; //reduce the semaphore count to lock
+  op2.sem_flg = 0; //wait till we get lock on semaphore
 
-static void
-sig_alrm(int signo)
-{
-    stop_alarm = 1;
-}
-
-/*------------------------------------------
- * Since the speed of differet systems vary,
- * we need to calculate the delay factor 
- *------------------------------------------
- */
-void calcuate_delay()
-{
-    int i;
-    struct tms t1;
-    struct tms t2;
-    clock_t t;
-    long clktck;
-    double td;
-
-    printf(".... Calculating delay factor ......\n");
-    stop_alarm = 0;
-    if (signal(SIGALRM, sig_alrm) == SIG_ERR)
-        perror("Set SIGALRM");
-    alarm(5); /* stop the following loop after 5 seconds */
-
-    times(&t1);
-    while (stop_alarm == 0)
-    {
-        DelayCount++;
-        basic_delay();
-    }
-    times(&t2);
-    alarm(0); /* turn off the timer */
-
-    /* Calcluate CPU time */
-    t = t2.tms_utime - t1.tms_utime;
-
-    /* fetch clock ticks per second */
-    if ((clktck = sysconf(_SC_CLK_TCK)) < 0)
-        perror("sysconf error");
-
-    /* actual delay in seconds */
-    td = t / (double)clktck;
-
-    Delay100ms = DelayCount / td / 10;
-
-    if (Delay100ms == 0)
-        Delay100ms++;
-
-    printf(".... End calculating delay factor\n");
-}
-
-/*-------------------------------------------
-   The reader
- --------------------------------------------*/
-void reader()
-{
-    //lock reading semaphore
-    op2.sem_num = 1; 
-    op2.sem_op = -1; 
-    op2.sem_flg = 0; 
-    if (semop(semid,&op2,1) == -1)
+  //locking the 0th semaphore
+  if (semop(semid,&op1,1) == -1)
     {
       perror("Thread1:semop failure Reason:");
       exit(-1);
     }
-
-    int i, j, n;
-    char results[FILE_SIZE];
-
-    srand(2);
-    for (i = 0; i < 1; i++)
-    {
-        printf("Reader %d (pid = %d) arrives\n", readerID, getpid());
-
-        /* read data from shared data */
-        for (j = 0; j < FILE_SIZE; j++)
-        {
-            results[j] = shared_buffer[j];
-            delay(4);
-        }
-
-        /* display result */
-        results[j] = 0;
-        printf("      Reader %d gets results = %s\n",
-               readerID, results);
-    }
-
-    //unlock reading semaphore
-    op2.sem_num = 1; 
-    op2.sem_op = 1; 
-    op2.sem_flg = 0; 
-    if (semop(semid,&op2,1) == -1)
+  else
+    fprintf(stderr,"Thread1:Successfully locked 0th semaphore\n");
+  //lock the 1th semaphore
+  if (semop(semid,&op2,1) == -1)
     {
       perror("Thread1:semop failure Reason:");
       exit(-1);
     }
-}
+  else
+    fprintf(stderr,"Thread1:Successfully locked 1th semaphore\n");
 
-/*-------------------------------------------
-   The writer. It tries to fill the buffer
-   repeatly with the same digit 
- --------------------------------------------*/
-void writer()
-{
-    struct sembuf op1;
 
-    //lock the semaphore
-    op1.sem_num = 0;
-    op1.sem_op = -1;
-    op1.sem_flg = 0;
-    if (semop(semid, &op1, 1) == -1)
-    {
-        perror("Thread1:semop failure Reason:");
-        exit(-1);
-    }
 
-    int i, j, n;
-    char data[FILE_SIZE];
+  //release the 0th semaphore
+  op1.sem_num = 0; //signifies 0th semaphore
+  op1.sem_op = 1; //reduce the semaphore count to lock
+  op1.sem_flg = 0; //wait till we get lock on semaphore
 
-    srand(1);
-
-    for (j = 0; j < FILE_SIZE - 1; j++)
-    {
-        data[j] = writerID + '0';
-    }
-    data[j] = 0;
-
-    for (i = 0; i < 1; i++)
-    {
-        printf("Writer %d (pid = %d) arrives, writing %s to buffer\n",
-               writerID, getpid(), data);
-
-        /* write to shared buffer */
-        for (j = 0; j < FILE_SIZE - 1; j++)
-        {
-            shared_buffer[j] = data[j];
-            delay(3);
-        }
-
-        printf("Writer %d finishes\n", writerID);
-    }
-
-    //unlock writing semaphore
-    op2.sem_num = 0; 
-    op2.sem_op = 1; 
-    op2.sem_flg = 0; 
-    if (semop(semid,&op2,1) == -1)
+  if (semop(semid,&op1,1) == -1)
     {
       perror("Thread1:semop failure Reason:");
       exit(-1);
     }
+  else
+    fprintf(stderr,"Thread1:Successfully unlocked 0th semaphore\n");
+
+  //release the 1th semaphore
+  op2.sem_num = 1; //signifies 0th semaphore
+  op2.sem_op = 1; //reduce the semaphore count to lock
+  op2.sem_flg = 0; //wait till we get lock on semaphore
+
+  if (semop(semid,&op2,1) == -1)
+    {
+      perror("Thread1:semop failure Reason:");
+      exit(-1);
+    }
+  else
+    fprintf(stderr,"Thread1:Successfully unlocked 1th semaphore\n");
 }
 
-/*-------------------------------------------
-
-      Routines for creating readers and writers
-
-*-------------------------------------------*/
-void create_reader()
+void *Thread2(void *arg)
 {
-    if (0 == fork())
-    {
-        reader();
-        exit(0);
-    }
+  int semid;
+  semid = (int)arg;
 
-    readerID++;
+  //in order to perform the operations on semaphore
+  // first need to define the sembuf object
+  struct sembuf op1,op2;
+
+  //operation for 0th semaphore
+  op1.sem_num = 0; //signifies 0th semaphore
+  op1.sem_op = -1; //reduce the semaphore count to lock
+  op1.sem_flg = 0; //wait till we get lock on semaphore
+
+  //operation for 1th semaphore
+  op2.sem_num = 1; //signifies 0th semaphore
+  op2.sem_op = -1; //reduce the semaphore count to lock
+  op2.sem_flg = 0; //wait till we get lock on semaphore
+
+  //lock the 0th semaphore
+  if (semop(semid,&op1,1) == -1)
+    {
+      perror("Reason:");
+      exit(-1);
+    }
+  else
+    fprintf(stderr,"Thread2:Successfully locked 0th semaphore\n");
+
+  //lock the 1th semaphore
+  if (semop(semid,&op2,1) == -1)
+    {
+      perror("Reason:");
+      exit(-1);
+    }
+  else
+    fprintf(stderr,"Thread2:Successfully locked 1th semaphore\n");
+
+  //release 0th semaphore
+
+  op1.sem_num = 0; //signifies 0th semaphore
+  op1.sem_op = 1; //reduce the semaphore count to lock
+  op1.sem_flg = 0; //wait till we get lock on semaphore
+
+  if (semop(semid,&op1,1) == -1)
+    {
+      perror("Reason:");
+      exit(-1);
+    }
+  else
+    fprintf(stderr,"Thread2:Successfully unlocked 0th semaphore\n");
+
+  //release the 1th semaphore
+  op2.sem_num = 1; //signifies 0th semaphore
+  op2.sem_op = 1; //reduce the semaphore count to lock
+  op2.sem_flg = 0; //wait till we get lock on semaphore
+
+  if (semop(semid,&op2,1) == -1)
+    {
+      perror("Reason:");
+      exit(-1);
+    }
+  else
+    fprintf(stderr,"Thread2:Successfully unlocked 1th semaphore\n");
+
 }
 
-void create_writer()
+int main()
 {
-    if (0 == fork())
+  pthread_t tid1,tid2;
+  int semid;
+
+  //create user defined semun for initializing the semaphores
+
+  typedef union semun
+  {
+    int val;
+    struct semid_ds *buf;
+    ushort * array;
+  }semun_t;
+
+  semun_t arg;
+  semun_t arg1;
+
+  //creating semaphore object with two semaphore in a set
+  //viz 0th & 1th semaphore
+  semid = semget(IPC_PRIVATE,2,0666|IPC_CREAT);
+  if(semid<0)
     {
-        writer();
-        exit(0);
+      perror("semget failed Reason:");
+      exit(-1);
     }
 
-    writerID++;
-}
-
-/*-------------------------------------------
- --------------------------------------------*/
-void main()
-{
-    int return_value;
-    char InitData[] = "0000000000\n";
-    int i;
-    int fd;
-
-    //initialize semaphores
-    typedef union semun {
-        int val;
-        struct semid_ds *buf;
-        ushort *array;
-    } semun_t;
-    semun_t arg, arg1;
-    semid = semget(IPC_PRIVATE, 2, 0666 | IPC_CREAT);
-
-    //writing semaphore
-    arg.val = 1;
-    if (semctl(semid, 0, SETVAL, arg) < 0)
+  //initialize 0th semaphore in the set to value 1
+  arg.val = 1;
+  if ( semctl(semid,0,SETVAL,arg)<0 )
     {
-        perror("semctl failure Reason:");
-        exit(-1);
+      perror("semctl failure Reason:");
+      exit(-1);
+    }
+  //initialize 1th semaphore in the set to value 1
+  arg1.val = 1;
+  if( semctl(semid,1,SETVAL,arg1)<0 )
+    {
+      perror("semctl failure Reason: ");
+      exit(-1);
     }
 
-    //reading semaphore
-    arg1.val = 0;
-    if (semctl(semid, 1, SETVAL, arg1) < 0)
+  //create two threads to work on these semaphores
+  if(pthread_create(&tid1, NULL,Thread1, semid))
     {
-        perror("semctl failure Reason: ");
-        exit(-1);
+      printf("\n ERROR creating thread 1");
+      exit(1);
     }
-
-    calcuate_delay();
-
-    /*-------------------------------------------------------
-   
-       The following code segment creates a memory
-     region shared by all child processes
-       If you can't completely understand the code, don't
-     worry. You don't have to understand the detail
-     of mmap() to finish the homework
-  
-  -------------------------------------------------------*/
-
-    fd = open("race.dat", O_RDWR | O_CREAT | O_TRUNC, 0600);
-    if (fd < 0)
+  if(pthread_create(&tid2, NULL,Thread2, semid) )
     {
-        perror("race.dat ");
-        exit(1);
+      printf("\n ERROR creating thread 2");
+      exit(1);
     }
+  //waiting on these threads to complete
+  pthread_join(tid1, NULL);
+  pthread_join(tid2, NULL);
 
-    write(fd, InitData, FILE_SIZE);
-
-    unlink("race.dat");
-
-    shared_buffer = mmap(0, FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (shared_buffer == (caddr_t)-1)
+  //once done clear the semaphore set
+  if (semctl(semid, 1, IPC_RMID ) == -1 )
     {
-        perror("mmap");
-        exit(2);
+      perror("semctl failure while clearing Reason:");
+      exit(-1);
     }
-
-    /*------------------------------------------------------- 
-  
-       Create some readers and writes (processes)
-  
-  -------------------------------------------------------*/
-    create_reader();
-    delay(1);
-    create_writer();
-    delay(1);
-    create_reader();
-    create_reader();
-    create_reader();
-    delay(1);
-    create_writer();
-    delay(1);
-    create_reader();
-
-    /* delay 15 seconds so all previous readers/writes can finish.
-   * This is to prevent writer starvation
-   */
-    delay(150);
-
-    create_writer();
-    delay(1);
-    create_writer();
-    delay(1);
-    create_reader();
-    create_reader();
-    create_reader();
-    delay(1);
-    create_writer();
-    delay(1);
-    create_reader();
-
-    /*------------------------------------------------------- 
-  
-      Wait until all children terminate
-  
-  --------------------------------------------------------*/
-    for (i = 0; i < (readerID + writerID); i++)
-    {
-        wait(NULL);
-    }
+  //exit the main threads
+  pthread_exit(NULL);
+  return 0;
 }
