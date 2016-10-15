@@ -164,6 +164,7 @@ void reader()
  --------------------------------------------*/
 void writer()
 {
+  
   struct sembuf op1;   
   op1.sem_num = 0;
   op1.sem_op = -1;
@@ -174,6 +175,8 @@ void writer()
     perror("Thread1:semop failure Reason:");
     exit(-1);
   }
+
+  //sleep(5);
 
   int i,j,n;
   char data[FILE_SIZE];
@@ -195,7 +198,7 @@ void writer()
           delay(3);  
       }
 
-      printf("Writer %d finishes\n", writerID);
+      printf("      Writer %d finishes\n", writerID);
   }
      
   op1.sem_num = 0;
@@ -340,5 +343,11 @@ void main()
   --------------------------------------------------------*/
   for (i=0; i<(readerID+writerID); i++) {
       wait(NULL);
+  }
+  
+  if (semctl(semid, 1, IPC_RMID ) == -1 )
+  {
+    perror("semctl failure while clearing Reason:");
+    exit(-1);
   }
 }
