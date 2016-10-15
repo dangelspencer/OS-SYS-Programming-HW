@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <sys/wait.h> 
+#include <sys/sem.h>
 
 #define FILE_SIZE 11
 #define NO_PROC   10
@@ -20,6 +21,8 @@ int writerID = 0;
 char* shared_buffer;
 
 int Delay100ms = 0;
+
+int semid;
 
 /*-------------------------------------------
     Delay routines
@@ -110,6 +113,18 @@ void calcuate_delay()
  --------------------------------------------*/
 void reader()
 {
+
+  struct sembuf op1;   
+  op1.sem_num = 0;
+  op1.sem_op = -1;
+  op1.sem_flg = 0;
+
+  if (semop(semid,&op1,1) == -1)
+  {
+    perror("Thread1:semop failure Reason:");
+    exit(-1);
+  }
+
   int i,j,n;
   char results[FILE_SIZE];
 
@@ -128,6 +143,16 @@ void reader()
       printf("      Reader %d gets results = %s\n", 
               readerID, results);
   }
+    
+  op1.sem_num = 0;
+  op1.sem_op = 1;
+  op1.sem_flg = 0;
+
+  if (semop(semid,&op1,1) == -1)
+  {
+    perror("Thread1:semop failure Reason:");
+    exit(-1);
+  }
 }
 
 
@@ -139,6 +164,17 @@ void reader()
  --------------------------------------------*/
 void writer()
 {
+  struct sembuf op1;   
+  op1.sem_num = 0;
+  op1.sem_op = -1;
+  op1.sem_flg = 0;
+
+  if (semop(semid,&op1,1) == -1)
+  {
+    perror("Thread1:semop failure Reason:");
+    exit(-1);
+  }
+
   int i,j,n;
   char data[FILE_SIZE];
 
@@ -160,6 +196,16 @@ void writer()
       }
 
       printf("Writer %d finishes\n", writerID);
+  }
+     
+  op1.sem_num = 0;
+  op1.sem_op = 1;
+  op1.sem_flg = 0;
+
+  if (semop(semid,&op1,1) == -1)
+  {
+    perror("Thread1:semop failure Reason:");
+    exit(-1);
   }
 }
 
@@ -228,7 +274,30 @@ void main()
      exit(2);
   }
      
+  typedef union semun
+  {
+    int val;
+    struct semid_ds *buf;
+    ushort * array;
+  }semun_t;
 
+  semun_t arg;
+  
+  semid = semget(IPC_PRIVATE,2,0666|IPC_CREAT);
+  if(semid<0)
+  {
+    perror("semget failed Reason:");
+    exit(-1);
+  }
+  
+  arg.val = 1;
+  if ( semctl(semid,0,SETVAL,arg)<0 )
+  {
+    perror("semctl failure Reason:");
+    exit(-1);
+  }
+  
+  
   /*------------------------------------------------------- 
   
        Create some readers and writes (processes)
