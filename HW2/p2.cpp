@@ -1,39 +1,43 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <iostream>
+
+using namespace std;
 
 int main(int argc, char *argv[])
 {
-    int fd[2];
-    int val = 0;
+  printf("enter 1o integers:\n");
+  int num, total;
+  num = 0;
+  total = 0;
+  for (int i = 0; i < 10; i++){
+    cout << ">> ";
+    cin >> num;
+    total += num;
+  }
+  int new_total = total / 10;
+  
+  printf("%d / 10 = %d\n", total, new_total);
+  
+  int fd[2];
 
-    // create pipe descriptors
-    pipe(fd);
+  pipe(fd);
 
-    // fork() returns 0 for child process, child-pid for parent process.
-    if (fork() != 0)
-    {
-        // parent: writing only, so close read-descriptor.
-        close(fd[0]);
-
-        // send the value on the write-descriptor.
-        val = 100;
-        write(fd[1], &val, sizeof(val));
-        printf("Parent(%d) send value: %d\n", getpid(), val);
-
-        // close the write descriptor
-        close(fd[1]);
-    }
-    else
-    {   // child: reading only, so close the write-descriptor
-        close(fd[1]);
-
-        // now read the data (will block)
-        read(fd[0], &val, sizeof(val));
-        printf("Child(%d) received value: %d\n", getpid(), val);
-
-        // close the read-descriptor
-        close(fd[0]);
-    }
-    return 0;
+  if (fork() != 0)
+  {
+    close(fd[0]);
+    write(fd[1], &new_total, sizeof(new_total));
+    printf("Parent(%d) send value: %d\n", getpid(), new_total);
+    close(fd[1]);
+  }
+  else
+  {   
+    close(fd[1]);
+    read(fd[0], &new_total, sizeof(new_total));
+    printf("Child(%d) received value: %d\n", getpid(), new_total);
+    close(fd[0]);
+  }
+  sleep(1);
+  return 0;
 }
