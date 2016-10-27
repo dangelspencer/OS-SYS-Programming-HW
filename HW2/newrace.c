@@ -28,13 +28,13 @@ typedef union
     int val;
     struct semid_ds *buf;
     ushort *array;
-  }semun_t;
+  }semun;
 
 
 void set(int semid){
-  semun_t arg;
+  semun arg;
   arg.val = 1;
-  
+
   if (semctl(semid,0,SETVAL, arg)<0 )
   {
     perror("semctl failure Reason:");
@@ -45,19 +45,19 @@ void set(int semid){
 int initial(int nsems){
 
   key_t key = (shared_buffer, 1);
-  int semid = semget(key, nsems, IPC_CREAT | 0666); 
+  int semid = semget(key, nsems, IPC_CREAT | 0666);
   if(semid<0)
   {
     perror("semget failed Reason:");
     exit(-1);
   }
-  
+
   set(semid);
   return semid;
 }
 
 void lock(int semid){
-  struct sembuf op1;   
+  struct sembuf op1;
   op1.sem_num = 0;
   op1.sem_op = -1;
   op1.sem_flg = SEM_UNDO;
@@ -81,7 +81,7 @@ void unlock(int semid){
 }
 
 void removeSem(int semid){
-  if (semctl(semid,0,IPC_RMID)<0 ) 
+  if (semctl(semid,0,IPC_RMID)<0 )
   {
     perror("semctl failure Reason:");
     exit(-1);
@@ -125,7 +125,7 @@ sig_alrm(int signo)
 
 /*------------------------------------------
  * Since the speed of differet systems vary,
- * we need to calculate the delay factor 
+ * we need to calculate the delay factor
  *------------------------------------------
  */
 void calcuate_delay()
@@ -147,12 +147,12 @@ void calcuate_delay()
     while (stop_alarm == 0) {
         DelayCount++;
         basic_delay();
-    }    
+    }
     times(&t2);
     alarm(0);   /* turn off the timer */
 
     /* Calcluate CPU time */
-    t = t2.tms_utime - t1.tms_utime; 
+    t = t2.tms_utime - t1.tms_utime;
 
     /* fetch clock ticks per second */
     if ( (clktck = sysconf(_SC_CLK_TCK)) < 0 )
@@ -160,7 +160,7 @@ void calcuate_delay()
 
     /* actual delay in seconds */
     td = t / (double)clktck;
-    
+
     Delay100ms = DelayCount/td/10;
 
     if (Delay100ms == 0)
@@ -182,21 +182,21 @@ void reader(int semid)
 
   srand(2);
   for (i=0; i<1; i++) {
-      printf("Reader %d (pid = %d) arrives\n", readerID, getpid()); 
+      printf("Reader %d (pid = %d) arrives\n", readerID, getpid());
 
       lock(semid);
 
       /* read data from shared data */
       for (j=0; j<FILE_SIZE; j++) {
-         results[j] = shared_buffer[j]; 
-         delay(4);  
+         results[j] = shared_buffer[j];
+         delay(4);
       }
 
       unlock(semid);
- 
+
       /* display result */
       results[j] = 0;
-      printf("      Reader %d gets results = %s\n", 
+      printf("      Reader %d gets results = %s\n",
               readerID, results);
   }
 }
@@ -206,7 +206,7 @@ void reader(int semid)
 
 /*-------------------------------------------
    The writer. It tries to fill the buffer
-   repeatly with the same digit 
+   repeatly with the same digit
  --------------------------------------------*/
 void writer(int semid)
 {
@@ -221,17 +221,17 @@ void writer(int semid)
   data[j]= 0;
 
   for (i=0; i<1; i++) {
-      printf("Writer %d (pid = %d) arrives, writing %s to buffer\n", 
+      printf("Writer %d (pid = %d) arrives, writing %s to buffer\n",
               writerID, getpid(), data);
-      
+
       lock(semid);
 
       /* write to shared buffer */
       for (j=0; j<FILE_SIZE-1; j++) {
-          shared_buffer[j]= data[j]; 
-          delay(3);  
+          shared_buffer[j]= data[j];
+          delay(3);
       }
-     
+
       unlock(semid);
 
       printf("Writer %d finishes\n", writerID);
@@ -257,7 +257,7 @@ void create_reader(int semid)
 void create_writer(int semid)
 {
     if (0 == fork()) {
-        writer(semid); 
+        writer(semid);
         exit(0);
     }
 
@@ -268,8 +268,8 @@ void create_writer(int semid)
 
 /*-------------------------------------------
  --------------------------------------------*/
-void main() 
-{ 
+void main()
+{
   int return_value;
   char InitData[]="0000000000\n";
   int i;
@@ -280,14 +280,14 @@ void main()
   int semid = initial(1);
 
   /*-------------------------------------------------------
-   
+
        The following code segment creates a memory
      region shared by all child processes
        If you can't completely understand the code, don't
      worry. You don't have to understand the detail
      of mmap() to finish the homework
-  
-  -------------------------------------------------------*/ 
+
+  -------------------------------------------------------*/
 
   fd = open("race.dat", O_RDWR | O_CREAT | O_TRUNC, 0600);
   if ( fd < 0 ) {
@@ -304,13 +304,13 @@ void main()
      perror("mmap");
      exit(2);
   }
-     
 
-  /*------------------------------------------------------- 
-  
+
+  /*-------------------------------------------------------
+
        Create some readers and writes (processes)
-  
-  -------------------------------------------------------*/ 
+
+  -------------------------------------------------------*/
 
   create_reader(semid);
   delay(1);
@@ -341,11 +341,11 @@ void main()
   create_writer(semid);
   delay(1);
   create_reader(semid);
-  
-  /*------------------------------------------------------- 
-  
+
+  /*-------------------------------------------------------
+
       Wait until all children terminate
-  
+
   --------------------------------------------------------*/
   for (i=0; i<(readerID+writerID); i++) {
       wait(NULL);
@@ -353,4 +353,3 @@ void main()
 
   removeSem(semid);
 }
-
