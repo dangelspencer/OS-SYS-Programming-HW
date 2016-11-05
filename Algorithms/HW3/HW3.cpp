@@ -1,7 +1,10 @@
 #include<iostream>
 #include<stdio.h>
+#include<stdlib.h>
 #include<list>
 #include<sstream>
+#include<string.h>
+#include<cstring>
 
 using namespace std;
 
@@ -10,7 +13,7 @@ struct item {
     int steps; 
 };
 
-void GetAdjacencyMatrix(int* array, int n);
+void GetAdjacencyMatrix(int* array, int n, list<string> edges);
 int BFS(int* array, int v1, int v2, int n);
 int BFSLog(int* adj_matrix, int v1, int v2, int n);
 bool GetDistanceMatrix(int* adj_matrix, int* dis_matrix, int n);
@@ -21,8 +24,28 @@ void PrintMatrix(int* array, int n);
 
 int main() {
     cout << "Please enter the number of vertices: ";
-    int n;
-    cin >> n;
+    string input;
+    getline(cin, input);
+    
+    string delimeter = " ", token;
+    size_t pos = 0;
+    
+    cout << "Input: " << input << endl;
+    
+    list<string> network;
+    
+    while((pos = input.find(delimeter)) != std::string::npos) {
+        token = input.substr(0, pos);
+        network.push_back(token);
+        cout << token << endl;
+        input.erase(0, delimeter.length());
+        
+    }
+
+    int n = atoi(network.front().c_str());
+    network.pop_front();
+    
+    cout << "Network Size: " << n << endl;
     
     int a[n*n];
     int d[n*n];
@@ -30,7 +53,7 @@ int main() {
     ZeroMatrix(a, n);
     ZeroMatrix(d, n);
     
-    GetAdjacencyMatrix(a, n);
+    GetAdjacencyMatrix(a, n, network);
 
     bool connected = GetDistanceMatrix(a, d, n);
     
@@ -50,23 +73,19 @@ int main() {
     return 0;
 }
 
-void GetAdjacencyMatrix(int* array, int n) {
+void GetAdjacencyMatrix(int* array, int n, list<string> edges) {
     int node1, node2;
-    bool working = true;
 
-    while (working) {
-        cout << "Enter first node of edge: ";
-        cin >> node1;
-        if (node1 < 0) {
-            working = false;
-            break;
-        }
-        
-        cout << "Enter second node of edge: ";
-        cin >> node2;
-        
+    while (!edges.empty() && edges.size() > 1) {
+        edges.pop_front();
+        node1 = atoi(edges.front().c_str());
+        edges.pop_front();
+        node2 = atoi(edges.front().c_str());
+        edges.pop_front();
+                
         array[node1 * n + node2] = 1;
         array[node2 * n + node1] = 1;
+        cout << "Found Edge: " << node1 << " - " << node2 << endl;
     }    
 }
 
