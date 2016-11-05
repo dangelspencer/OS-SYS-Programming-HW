@@ -1,136 +1,168 @@
-#include<iostream>
-#include<stdio.h>
-#include<stdlib.h>
-#include<list>
-#include<sstream>
-#include<string.h>
-#include<cstring>
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <list>
+#include <sstream>
+#include <string.h>
+#include <cstring>
 
 using namespace std;
 
-struct item {
+struct item
+{
     int node;
-    int steps; 
+    int steps;
 };
 
-void GetAdjacencyMatrix(int* array, int n, list<string> edges);
-int BFS(int* array, int v1, int v2, int n);
-int BFSLog(int* adj_matrix, int v1, int v2, int n);
-bool GetDistanceMatrix(int* adj_matrix, int* dis_matrix, int n);
-int Diameter(int* adj_matrix, int* dis_matrix, int n);
-string ConnectedComponents(int* adj_matrix, int* dis_matrix, int n);
-void ZeroMatrix(int* array, int n);
-void PrintMatrix(int* array, int n);
+void GetAdjacencyMatrix(int *array, int n, string input);
+int BFS(int *array, int v1, int v2, int n);
+int BFSLog(int *adj_matrix, int v1, int v2, int n);
+bool GetDistanceMatrix(int *adj_matrix, int *dis_matrix, int n);
+int Diameter(int *adj_matrix, int *dis_matrix, int n);
+string ConnectedComponents(int *adj_matrix, int *dis_matrix, int n);
+void ZeroMatrix(int *array, int n);
+void PrintMatrix(int *array, int n);
 
-int main() {
+int main()
+{
     cout << "Please enter the number of vertices: ";
     string input;
     getline(cin, input);
-    
+
     string delimeter = " ", token;
     size_t pos = 0;
-    
-    cout << "Input: " << input << endl;
-    
-    list<string> network;
-    
-    while((pos = input.find(delimeter)) != std::string::npos) {
-        token = input.substr(0, pos);
-        network.push_back(token);
-        cout << token << endl;
-        input.erase(0, delimeter.length());
-        
-    }
 
-    int n = atoi(network.front().c_str());
-    network.pop_front();
-    
+    cout << "Input: " << input << endl;
+
+    pos = input.find(delimeter);
+
+    int n = atoi(input.substr(0, pos).c_str());
+    input.erase(0, delimeter.length());
+
     cout << "Network Size: " << n << endl;
-    
-    int a[n*n];
-    int d[n*n];
-    
+
+    int a[n * n];
+    int d[n * n];
+
     ZeroMatrix(a, n);
     ZeroMatrix(d, n);
-    
-    GetAdjacencyMatrix(a, n, network);
+
+    GetAdjacencyMatrix(a, n, input);
 
     bool connected = GetDistanceMatrix(a, d, n);
-    
-    cout << endl << endl << "Adjacency Matrix" << endl << endl;   
+
+    cout << endl
+         << endl
+         << "Adjacency Matrix" << endl
+         << endl;
     PrintMatrix(a, n);
-    
-    cout << endl << endl << "Distance Matrix" << endl << endl;
+
+    cout << endl
+         << endl
+         << "Distance Matrix" << endl
+         << endl;
     PrintMatrix(d, n);
-    
-    if (connected) {
+
+    if (connected)
+    {
         cout << "Network is connected." << endl;
         cout << "\t Diameter is: " << Diameter(a, d, n) << endl;
-    } else {
-        cout << "Graph is not connected." << endl << "Connected Components:\n" << ConnectedComponents(a, d, n);
+    }
+    else
+    {
+        cout << "Graph is not connected." << endl
+             << "Connected Components:\n"
+             << ConnectedComponents(a, d, n);
     }
     cout << endl;
     return 0;
 }
 
-void GetAdjacencyMatrix(int* array, int n, list<string> edges) {
+void GetAdjacencyMatrix(int *array, int n, string input)
+{
+    string delimeter = " ";
+    size_t pos = 0;
     int node1, node2;
 
-    while (!edges.empty() && edges.size() > 1) {
-        edges.pop_front();
-        node1 = atoi(edges.front().c_str());
-        edges.pop_front();
-        node2 = atoi(edges.front().c_str());
-        edges.pop_front();
-                
+    while ((pos = input.find(delimeter)) != std::string::npos)
+    {
+        if (input.substr(0, pos) == ""){
+            input.erase(0, delimeter.length());
+            pos = input.find(delimeter);
+        }
+
+        node1 = atoi(input.substr(0, pos).c_str());
+        cout << "Found node: " << node1 << ", " << input.substr(0, pos) << endl;
+        input.erase(0, delimeter.length());
+
+        if (input.substr(0, pos) == " "){
+            input.erase(0, delimeter.length());
+        }
+
+        pos = input.find(delimeter);
+        node2 = atoi(input.substr(0, pos).c_str());
+        cout << "Found node: " << node2 << ", " << input.substr(0, pos) << endl;
+        input.erase(0, delimeter.length());
+
+        if (node1 < 0 || node2 < 0)
+        {
+            break;
+        }
+        cout << "Adding edge: " << node1 << " - " << node2 << endl;
         array[node1 * n + node2] = 1;
         array[node2 * n + node1] = 1;
-        cout << "Found Edge: " << node1 << " - " << node2 << endl;
-    }    
+    }
 }
 
-
-int BFS(int* adj_matrix, int v1, int v2, int n) {
-    if (v1 == v2) {
+int BFS(int *adj_matrix, int v1, int v2, int n)
+{
+    if (v1 == v2)
+    {
         //same node
         return 0;
     }
-    
-    int visited[n*n];
+
+    int visited[n * n];
     ZeroMatrix(visited, n);
-    
+
     int steps, node;
     list<item> q;
-    
+
     item a, b, t;
     a.node = v1;
     a.steps = 0;
     q.push_back(a);
-    
+
     //mark v1 as visited
-    for (int i = 0; i < n; i++) {
-        visited[i*n+v1] = 1;
+    for (int i = 0; i < n; i++)
+    {
+        visited[i * n + v1] = 1;
     }
-    
-    while (!q.empty()){
+
+    while (!q.empty())
+    {
         t = q.front();
         q.pop_front();
-        for (int i = 0; i < n; i++){
-            if (adj_matrix[t.node*n+i] == 1 && visited[t.node*n+i] != 1) {
+        for (int i = 0; i < n; i++)
+        {
+            if (adj_matrix[t.node * n + i] == 1 && visited[t.node * n + i] != 1)
+            {
                 //link present and new node not visited
-                
+
                 //add node i to back of queue
                 b.node = i;
                 b.steps = t.steps + 1;
                 q.push_back(b);
-                
+
                 //mark node i as visited
-                for (int i2 = 0; i2 < n; i2++) {
-                    visited[i2*n+i] = 1;
+                for (int i2 = 0; i2 < n; i2++)
+                {
+                    visited[i2 * n + i] = 1;
                 }
-                
+
                 //break if we reached the node we're looking for
-                if (i == v2) {
+                if (i == v2)
+                {
                     return t.steps + 1;
                 }
             }
@@ -139,53 +171,62 @@ int BFS(int* adj_matrix, int v1, int v2, int n) {
     return -1;
 }
 
-int BFSLog(int* adj_matrix, int v1, int v2, int n) {
-    if (v1 == v2) {
+int BFSLog(int *adj_matrix, int v1, int v2, int n)
+{
+    if (v1 == v2)
+    {
         //same node
         return 0;
     }
-    
-    cout << "Starting at node " << v1 << ", looking for node " << v2 << endl; 
-    
-    int visited[n*n];
+
+    cout << "Starting at node " << v1 << ", looking for node " << v2 << endl;
+
+    int visited[n * n];
     ZeroMatrix(visited, n);
-    
+
     int steps, node;
     list<item> q;
-    
+
     item a, b, t;
     a.node = v1;
     a.steps = 0;
     q.push_back(a);
-    
+
     //mark v1 as visited
-    for (int i = 0; i < n; i++) {
-        visited[i*n+v1] = 1;
+    for (int i = 0; i < n; i++)
+    {
+        visited[i * n + v1] = 1;
     }
-    
-    while (!q.empty()){
+
+    while (!q.empty())
+    {
         t = q.front();
         q.pop_front();
         cout << "Current Node: " << t.node << endl;
-        for (int i = 0; i < n; i++){
-            if (adj_matrix[t.node*n+i] == 1 && visited[t.node*n+i] != 1) {
+        for (int i = 0; i < n; i++)
+        {
+            if (adj_matrix[t.node * n + i] == 1 && visited[t.node * n + i] != 1)
+            {
                 //link present and new node not visited
-                
+
                 //add node i to back of queue
                 b.node = i;
                 b.steps = t.steps + 1;
                 q.push_back(b);
-                
+
                 cout << "\tFound: " << i << " (" << t.steps + 1 << " steps)" << endl;
-                
+
                 //mark node i as visited
-                for (int i2 = 0; i2 < n; i2++) {
-                    visited[i2*n+i] = 1;
+                for (int i2 = 0; i2 < n; i2++)
+                {
+                    visited[i2 * n + i] = 1;
                 }
-                
+
                 //break if we reached the node we're looking for
-                if (i == v2) {
-                    cout << "Reached node " << v2 << " in " << t.steps + 1 << " steps." << endl << endl;
+                if (i == v2)
+                {
+                    cout << "Reached node " << v2 << " in " << t.steps + 1 << " steps." << endl
+                         << endl;
                     return t.steps + 1;
                 }
             }
@@ -194,72 +235,92 @@ int BFSLog(int* adj_matrix, int v1, int v2, int n) {
     return -1;
 }
 
-bool GetDistanceMatrix(int* adj_matrix, int* dis_matrix, int n) {
-    for (int i = 0; i < n; i++) {
-        for (int i2 = 0; i2 < n; i2++) {
-            dis_matrix[i*n+i2] = BFS(adj_matrix, i, i2, n);
+bool GetDistanceMatrix(int *adj_matrix, int *dis_matrix, int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        for (int i2 = 0; i2 < n; i2++)
+        {
+            dis_matrix[i * n + i2] = BFS(adj_matrix, i, i2, n);
         }
     }
-    
-    for (int i = 0; i < n*n; i++){
-        if (dis_matrix[i] == -1) {
+
+    for (int i = 0; i < n * n; i++)
+    {
+        if (dis_matrix[i] == -1)
+        {
             return false;
         }
     }
     return true;
 }
 
-int Diameter(int* adj_matrix, int* dis_matrix, int n) {
+int Diameter(int *adj_matrix, int *dis_matrix, int n)
+{
     int max = 0;
-    if (GetDistanceMatrix(adj_matrix, dis_matrix, n)) {
-        for (int i = 0; i < n*n; i++) {
-            if (max < dis_matrix[i]){
+    if (GetDistanceMatrix(adj_matrix, dis_matrix, n))
+    {
+        for (int i = 0; i < n * n; i++)
+        {
+            if (max < dis_matrix[i])
+            {
                 max = dis_matrix[i];
             }
         }
-    } else {
+    }
+    else
+    {
         return -1;
     }
     return max;
 }
 
-string ConnectedComponents(int* adj_matrix, int* dis_matrix, int n) {
+string ConnectedComponents(int *adj_matrix, int *dis_matrix, int n)
+{
     string components = "";
     ostringstream oss;
-    if (!GetDistanceMatrix(adj_matrix, dis_matrix, n)) {
-        int visited[n*n];
+    if (!GetDistanceMatrix(adj_matrix, dis_matrix, n))
+    {
+        int visited[n * n];
         ZeroMatrix(visited, n);
-        
+
         list<int> q;
         int c;
-        
+
         oss << "\t";
-        
-        for (int i = 0; i < n; i++) {
-            if (visited[i] != 1) {
+
+        for (int i = 0; i < n; i++)
+        {
+            if (visited[i] != 1)
+            {
                 q.push_back(i);
-                
-                for (int i2 = 0; i2 < n; i2++) {
-                    visited[i2*n+i] = 1;
+
+                for (int i2 = 0; i2 < n; i2++)
+                {
+                    visited[i2 * n + i] = 1;
                 }
-                
+
                 oss << "[" << i;
-                while (!q.empty()) {
+                while (!q.empty())
+                {
                     c = q.front();
                     q.pop_front();
-                    
-                    for (int i2 = 0; i2 < n; i2++){
-                        if (adj_matrix[c*n+i2] == 1 && visited[c*n+i2] != 1) {
+
+                    for (int i2 = 0; i2 < n; i2++)
+                    {
+                        if (adj_matrix[c * n + i2] == 1 && visited[c * n + i2] != 1)
+                        {
                             //link present and new node not visited
-                            
+
                             //add node i to back of queue
                             q.push_back(i2);
-                            
+
                             oss << ", " << i2;
                             //mark node i as visited
-                            for (int i3 = 0; i3 < n; i3++) {
-                                visited[i3*n+i2] = 1;
-                            }                        
+                            for (int i3 = 0; i3 < n; i3++)
+                            {
+                                visited[i3 * n + i2] = 1;
+                            }
                         }
                     }
                 }
@@ -267,32 +328,44 @@ string ConnectedComponents(int* adj_matrix, int* dis_matrix, int n) {
             }
         }
         components = oss.str();
-    } else {
+    }
+    else
+    {
         components = "n/a: graph is connected.";
     }
     return components;
 }
 
-
-void ZeroMatrix(int* matrix, int n) {
-    for (int y = 0; y < n; y++) {
-        for (int x = 0; x < n; x++) {
-            matrix[x*n+y] = 0;
+void ZeroMatrix(int *matrix, int n)
+{
+    for (int y = 0; y < n; y++)
+    {
+        for (int x = 0; x < n; x++)
+        {
+            matrix[x * n + y] = 0;
         }
     }
 }
 
-void PrintMatrix(int* matrix, int n) {
+void PrintMatrix(int *matrix, int n)
+{
     cout << "\t";
-    for (int i = 0; i < n; i++){
+    for (int i = 0; i < n; i++)
+    {
         cout << i << "\t";
     }
-    cout << endl << endl << endl;
-    for (int y = 0; y < n; y++) {
+    cout << endl
+         << endl
+         << endl;
+    for (int y = 0; y < n; y++)
+    {
         cout << y << "\t";
-        for (int x = 0; x < n; x++){
-            cout << matrix[x*n+y] << "\t";
+        for (int x = 0; x < n; x++)
+        {
+            cout << matrix[x * n + y] << "\t";
         }
-        cout << endl << endl << endl;
+        cout << endl
+             << endl
+             << endl;
     }
 }
